@@ -1,0 +1,13 @@
+{
+  "name": "socketserver",
+  "version": "",
+  "minimumRequiredVersion": "2.001.003.012",
+  "description": "",
+  "vendor": "",
+  "copyright": "Kacper Lichwiarz",
+  "contactAddress": "",
+  "author": "",
+  "dependencies": {},
+  "license": "",
+  "rodiVersion": ""
+}
