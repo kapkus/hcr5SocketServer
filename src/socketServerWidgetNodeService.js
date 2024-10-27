@@ -11,10 +11,10 @@ class socketServerWidgetNodeService extends WidgetNodeService{
         return 'socketServer';
     }
     getIcon(){
-        return path.join(__dirname, "htmlStore/resource/ico-rodi-x.png");
+        return path.join(__dirname, "../static/htmlStore/resource/ico-rodi-x.png");
     }
     getHTML(){
-        return path.join(__dirname, "htmlStore/socketServerWidgetNode.html");
+        return path.join(__dirname, "../static/htmlStore/socketServerWidgetNode.html");
     }
     createContribution(rodiAPI, dataModel){
         return new socketServerWidgetNodeContribution(rodiAPI, dataModel);

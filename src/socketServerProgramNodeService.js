@@ -8,7 +8,7 @@ class socketServerProgramNodeService extends ProgramNodeService{
     }
 
     getIcon() {
-        return path.join(__dirname, "htmlStore/resource/ico-rodi-x.png");
+        return path.join(__dirname, "../static/htmlStore/resource/ico-rodi-x.png");
     }
 
     getTitle(){
@@ -16,7 +16,7 @@ class socketServerProgramNodeService extends ProgramNodeService{
     }
 
     getHTML(){
-        return path.join(__dirname, "htmlStore/socketServerProgramNode.html");
+        return path.join(__dirname, "../static/htmlStore/socketServerProgramNode.html");
     }
 
     isDeprecated(){

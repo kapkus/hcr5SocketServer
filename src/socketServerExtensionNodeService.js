@@ -11,7 +11,7 @@ class socketServerExtensionNodeService extends ExtensionNodeService{
         return 'socketServer';
     }
     getHTML(){
-        return path.join(__dirname, "htmlStore/socketServerExtensionNode.html");
+        return path.join(__dirname, "../static/htmlStore/socketServerExtensionNode.html");
     }
     createContribution(rodiAPI, dataModel){
         return new socketServerExtensionNodeContribution(rodiAPI, dataModel);

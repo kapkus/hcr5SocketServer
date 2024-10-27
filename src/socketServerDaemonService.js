@@ -5,7 +5,7 @@ class socketServerDaemonService extends DaemonService{
     constructor() {
       super();
 
-      this.executablePath = path.join(__dirname, 'exec', 'putty.exe');
+      this.executablePath = path.join(__dirname, '../static/exec', 'putty.exe');
       this.daemonContribution = null;
     }
 

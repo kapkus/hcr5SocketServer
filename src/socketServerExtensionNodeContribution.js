@@ -47,6 +47,7 @@ class socketServerExtensionNodeContribution extends ExtensionNodeContribution {
                 this.components.btnStopServer.setVisible(true);
                 this.components.labelServerStatus.setText('Running on 127.0.0.1:' + this.port);
                 console.debug('test2')
+                console.debug('test2')
                 
                 
                 this.uiHandler.render(); 
@@ -66,11 +67,11 @@ class socketServerExtensionNodeContribution extends ExtensionNodeContribution {
     }
 
     openView(){
-        console.debug('test openView')
+        console.debug('bububu')
         
     }
     closeView(){
-        console.debug('test closeView')
+        console.debug('aaa')
 
     }
     generateScript(enterWriter, exitWriter){
