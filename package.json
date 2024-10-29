@@ -7,7 +7,12 @@
   "copyright": "Kacper Lichwiarz",
   "contactAddress": "",
   "author": "",
-  "dependencies": {},
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^8.6.0",
+    "express": "^4.21.1",
+    "mongodb": "^3.7.4"
+  },
   "license": "",
   "rodiVersion": "",
   "devDependencies": {

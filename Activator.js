@@ -11,7 +11,7 @@ class Activator extends PluginActivator {
   }
 
   start(context) {
-    context.registerService('socketServerDaemonService', new socketServerDaemonService());
+    // context.registerService('socketServerDaemonService', new socketServerDaemonService());
     context.registerService('socketServerExtension', new socketServerExtensionService());
     context.registerService('socketServerProgramNodeService', new socketServerProgramNodeService());
     context.registerService('socketServerWidget', new socketServerWidgetService());

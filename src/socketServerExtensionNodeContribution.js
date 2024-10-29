@@ -1,5 +1,6 @@
 const ExtensionNodeContribution = require('rodix_api').ExtensionNodeContribution;
-const http = require('http');
+// const http = require('http');
+const {setupServer} = require('./server/server');
 
 class socketServerExtensionNodeContribution extends ExtensionNodeContribution {
     constructor(rodiAPI, dataModel){
@@ -42,7 +43,7 @@ class socketServerExtensionNodeContribution extends ExtensionNodeContribution {
 
                 this.validateInputPort(this.port);
 
-                this.server = this.setupServer(this.port);
+                this.server = setupServer(this.port);
                 this.components.btnRunServer.setVisible(false);
                 this.components.btnStopServer.setVisible(true);
                 this.components.labelServerStatus.setText('Running on 127.0.0.1:' + this.port);
@@ -78,16 +79,6 @@ class socketServerExtensionNodeContribution extends ExtensionNodeContribution {
 
     }
 
-    setupServer (port) {
-        const server = http.createServer(function (req, res) {
-            console.debug("TESCIK");
-            res.writeHead(200, {'Content-Type': 'text/html'});
-            res.write('Hello World!');
-            res.end();
-          }).listen(port);
-          return server;
-    }
-
     onBtnStopServer () {
         if(this.server) {
 
@@ -95,12 +86,11 @@ class socketServerExtensionNodeContribution extends ExtensionNodeContribution {
                 console.debug('server closed')
             });
             this.server = null;
+            this.components.btnRunServer.setVisible(true);
+            this.components.btnStopServer.setVisible(false);
+            this.components.labelServerStatus.setText('Not running');
+            this.uiHandler.render();
         }
-        this.components.btnRunServer.setVisible(true);
-        this.components.btnStopServer.setVisible(false);
-        this.components.labelServerStatus.setText('Not running');
-        this.uiHandler.render();
-
     }
 }
 
