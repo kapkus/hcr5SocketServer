@@ -1,18 +1,21 @@
 const express = require('express');
 const router = express.Router();
-const mongoClient = require('../mongo');
 
-router.get('/', async (req, res, next) => {
-    try {
-        const client = await mongoClient(); 
-        console.debug(client)
+const authRouter = require('./auth');
 
-        res.status(200).json({ok: "ok"});
+router.use('/login', authRouter);
+
+// router.get('/', async (req, res, next) => {
+//     try {
+//         const client = await mongoClient(); 
+//         console.debug(client)
+
+//         res.status(200).json({ok: "okaaaaa"});
 
 
-    } catch (err) {
-        console.debug(err);
-    }
-});
+//     } catch (err) {
+//         console.debug(err);
+//     }
+// });
 
 module.exports = router;

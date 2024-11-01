@@ -19,7 +19,7 @@ class socketServerExtensionNodeContribution extends ExtensionNodeContribution {
         this.server = null;
 
         // dev
-        this.setupServer(this.port);
+        setupServer(this.port);
     }
 
     validateInputPort (port) {
