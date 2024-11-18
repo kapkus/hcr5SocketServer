@@ -21,13 +21,13 @@ const corsOptions = {
 	optionsSuccessStatus: 200
 }
 
-const setupServer = (port) => {
+const setupServer = (port, rodiAPI) => {
     console.debug('mongoURI', mongoURI)
     console.debug('mongoURI', host)
 
     app.use(express.json());
     app.use(cors(corsOptions));
-    setupWebSocketServer(server);
+    setupWebSocketServer(server, rodiAPI);
     app.use(authMiddleware);
     app.use(routes);
     app.use(errorMiddleware);

@@ -2,8 +2,10 @@ const express = require('express');
 const router = express.Router();
 
 const authRouter = require('./auth');
+const settingsRouter = require('./settings');
 
 router.use('/login', authRouter);
+router.use('/settings', settingsRouter);
 
 // router.get('/', async (req, res, next) => {
 //     try {

@@ -19,7 +19,7 @@ class socketServerExtensionNodeContribution extends ExtensionNodeContribution {
         this.server = null;
 
         // dev
-        setupServer(this.port);
+        setupServer(this.port, this.rodiAPI);
     }
 
     validateInputPort (port) {
@@ -43,7 +43,7 @@ class socketServerExtensionNodeContribution extends ExtensionNodeContribution {
 
                 this.validateInputPort(this.port);
 
-                this.server = setupServer(this.port);
+                this.server = setupServer(this.port, this.rodiAPI);
                 this.components.btnRunServer.setVisible(false);
                 this.components.btnStopServer.setVisible(true);
                 this.components.labelServerStatus.setText('Running on 127.0.0.1:' + this.port);
