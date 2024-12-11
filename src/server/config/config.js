@@ -9,8 +9,9 @@ module.exports = {
     MONGO: {
         URI: process.env.MONGO_URI,
     },
-    TCP_SERVER: {
-        PORT: process.env.TCP_SERVER_PORT || 8001
+    TCP_LIDAR_SERVER: {
+        HOST: process.env.LIDAR_TCP_HOST || '0.0.0.0',
+        PORT: process.env.LIDAR_TCP_PORT || 8002
     },
 
     CONSTANT: {

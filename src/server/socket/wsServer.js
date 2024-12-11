@@ -2,6 +2,9 @@ const WebSocket = require('ws');
 const uuidv4 = require('uuid/v4');
 const { authenticateSocket } = require('../utility/utils');
 const currentState = require('./currentState');
+const verifyScanData = require('./verifyScanData');
+const LidarTcpClient = require('./lidarTcpClient');
+const config = require('../config/config');
 // const eventEmitter = require('../utils/eventEmitter');
 
 const connections = {};
@@ -12,8 +15,87 @@ let robotModel = null;
 let isRobotBusy = null;
 let eventModel = null;
 
-const setupWebSocketServer = (server, rodiAPI) => {
+let tcpClient = null; 
+
+const setupTcpEvents = async (wsServer) => {
+    if (tcpClient) {
+        console.error('Instance of lidar TCP connection already exists');
+        return;
+    }
+
+    try {
+        tcpClient = new LidarTcpClient(config.TCP_LIDAR_SERVER.HOST, config.TCP_LIDAR_SERVER.PORT);
+        tcpClient.connect();
+    } catch (err) {
+        console.debug('Error while connecting to LIDAR:', err);
+        await reconnectTcpClient(wsServer);
+        return;
+    }
+
+    tcpClient.on('connected', () => {
+        console.debug('TCP client connected');
+        const status = { type: 'lidarSocket', value: {status: tcpClient.status} };
+        streamMessage(status);
+    });
+
+    tcpClient.on('message', (data) => {
+        console.debug('Received from TCP:', data);
+        wsServer.clients.forEach((client) => {
+            if (client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify(data));
+            }
+        });
+    });
+
+    tcpClient.on('error', async (err) => {
+        console.debug('TCP client error:', err.message);
+        const status = { type: 'lidarSocket', value: {status: tcpClient.status} };
+        streamMessage(status);
+        await reconnectTcpClient(wsServer);
+    });
+
+    tcpClient.on('disconnected', async () => {
+        console.debug('TCP client disconnected');
+        const status = { type: 'lidarSocket', value: {status: tcpClient.status} };
+        streamMessage(status);
+        await reconnectTcpClient(wsServer);
+    });
+};
+
+const reconnectTcpClient = async (wsServer) => {
+    while (true) {
+        try {
+            console.debug('Attempting to reconnect to TCP server...');
+
+            const status = { type: 'lidarSocket', value: {status: 'onhold'} };
+            streamMessage(status);
+
+            if (tcpClient) {
+                tcpClient.disconnect();
+            }
+
+            tcpClient = new LidarTcpClient(config.TCP_LIDAR_SERVER.HOST, config.TCP_LIDAR_SERVER.PORT);
+            await tcpClient.connect();
+
+            console.debug('Reconnected to TCP server');
+            setupTcpEvents(wsServer);
+
+            break;
+        } catch (err) {
+            const status = { type: 'lidarSocket', value: {status: tcpClient.status} };
+            streamMessage(status);
+            console.error('Reconnection attempt failed:', err.message);
+            console.debug('Retrying in 5 seconds...');
+            await new Promise((resolve) => setTimeout(resolve, 5000));
+        }
+    }
+};
+
+
+const setupWebSocketServer = async (server, rodiAPI) => {
     const wsServer = new WebSocket.Server({ noServer: true });
+    await setupTcpEvents(wsServer);
+
     commandModel = rodiAPI.getCommandModel();
     coordinateModel = rodiAPI.getCoordinateModel();
     variableModel = rodiAPI.getVariableModel();
@@ -33,7 +115,10 @@ const setupWebSocketServer = (server, rodiAPI) => {
             wsServer.emit('connection', connection, request);
 
             const state = currentState(robotModel, commandModel);
-            connection.send(JSON.stringify(state))
+            const lidarStatus = { type: 'lidarSocket', value: {status: tcpClient.status} };
+
+            connection.send(JSON.stringify(state));
+            connection.send(JSON.stringify(lidarStatus));
         })
     })
 
@@ -120,6 +205,9 @@ const setupWebSocketServer = (server, rodiAPI) => {
                         }
                     })
                 break;
+                case "verifyScanData":
+                    verifyScanData(parsedMessage.data);
+                break;
             }
 
             // console.debug("getCurrentJoint", robotModel.getCurrentJoint())
@@ -168,6 +256,12 @@ const setupWebSocketServer = (server, rodiAPI) => {
 
 };
 
+
+const streamMessage = (msg) => {
+    for( const [uuid, connection] of Object.entries(connections)) {
+        connection.send(JSON.stringify(msg))
+    }
+}
 
 const streamRobotState = (streamingConn, msg) => {
 
