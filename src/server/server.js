@@ -2,7 +2,7 @@ const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 const http = require('http');
 const express = require('express');
-const setupWebSocketServer = require('./socket/wsServer');
+const {setupWebSocketServer} = require('./socket/wsServer');
 const config = require('./config');
 const cors = require('cors');
 const routes = require('./routes/router');

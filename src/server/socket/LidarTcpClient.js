@@ -58,8 +58,6 @@ class TcpClient extends EventEmitter {
         });
     }
 
-    setStatus
-
     disconnect = () => {
         this.cleanup();
     }

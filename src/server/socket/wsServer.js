@@ -2,19 +2,17 @@ const WebSocket = require('ws');
 const uuidv4 = require('uuid/v4');
 const { authenticateSocket } = require('../utility/utils');
 const currentState = require('./currentState');
-const verifyScanData = require('./verifyScanData');
 const LidarTcpClient = require('./lidarTcpClient');
 const config = require('../config/config');
+const beginScan = require('./scanArea');
+const { isRobotBusy, createRobotContext, getCurrentState, streamRobotPositions, streamRobotState } = require('../utility/robotContext');
 // const eventEmitter = require('../utils/eventEmitter');
 
 const connections = {};
 let commandModel = null;
-let coordinateModel = null;
-let variableModel = null;
 let robotModel = null;
-let isRobotBusy = null;
-let eventModel = null;
 
+let context = null;
 let tcpClient = null; 
 
 const setupTcpEvents = async (wsServer) => {
@@ -34,6 +32,7 @@ const setupTcpEvents = async (wsServer) => {
 
     tcpClient.on('connected', () => {
         console.debug('TCP client connected');
+        console.debug(tcpClient.status)
         const status = { type: 'lidarSocket', value: {status: tcpClient.status} };
         streamMessage(status);
     });
@@ -60,6 +59,8 @@ const setupTcpEvents = async (wsServer) => {
         streamMessage(status);
         await reconnectTcpClient(wsServer);
     });
+
+    return tcpClient;
 };
 
 const reconnectTcpClient = async (wsServer) => {
@@ -76,6 +77,9 @@ const reconnectTcpClient = async (wsServer) => {
 
             tcpClient = new LidarTcpClient(config.TCP_LIDAR_SERVER.HOST, config.TCP_LIDAR_SERVER.PORT);
             await tcpClient.connect();
+
+            const statusSuccess = { type: 'lidarSocket', value: {status: tcpClient.status} };
+            streamMessage(statusSuccess);
 
             console.debug('Reconnected to TCP server');
             setupTcpEvents(wsServer);
@@ -94,13 +98,10 @@ const reconnectTcpClient = async (wsServer) => {
 
 const setupWebSocketServer = async (server, rodiAPI) => {
     const wsServer = new WebSocket.Server({ noServer: true });
-    await setupTcpEvents(wsServer);
+    const tcpClient = await setupTcpEvents(wsServer);
 
-    commandModel = rodiAPI.getCommandModel();
-    coordinateModel = rodiAPI.getCoordinateModel();
-    variableModel = rodiAPI.getVariableModel();
-    robotModel = rodiAPI.getRobotModel();
-    eventModel = rodiAPI.getEventModel();
+    context = createRobotContext(rodiAPI, tcpClient, connections);
+    
 
     /** JSON webtoken authentication by socket */
     server.on('upgrade', (request, socket, head) => {
@@ -114,7 +115,7 @@ const setupWebSocketServer = async (server, rodiAPI) => {
         wsServer.handleUpgrade(request, socket, head, connection => {
             wsServer.emit('connection', connection, request);
 
-            const state = currentState(robotModel, commandModel);
+            const state = getCurrentState();
             const lidarStatus = { type: 'lidarSocket', value: {status: tcpClient.status} };
 
             connection.send(JSON.stringify(state));
@@ -129,17 +130,22 @@ const setupWebSocketServer = async (server, rodiAPI) => {
 
 
         connection.on('message', (msg) =>{ 
-            const parsedMessage = JSON.parse(msg);
+            let parsedMessage = {};
+            try {
+                parsedMessage = JSON.parse(msg);
+            } catch (err) {
+                console.debug(err)
+                connection.send(JSON.stringify({type: "notification", code: "WS_000", msg: "Error parsing the message"}))
+            }
 
             switch (parsedMessage.type) {
                 case "startMove":
-                    if(isRobotBusy) {
+                    if(isRobotBusy()) {
                         connection.send(JSON.stringify({type: "notification", code: "WS_001", msg: "Error - robot is busy"}))
                     }
 
-                    commandModel.jog_axis({standard: "base", axis: parsedMessage.axis, direction: parsedMessage.direction, distance: -1}, (res) => {
+                    context.commandModel.jog_axis({standard: "base", axis: parsedMessage.axis, direction: parsedMessage.direction, distance: -1}, (res) => {
                         if(res.message === "SUCCESS_SET") {
-                            isRobotBusy = true;
                             streamRobotPositions();
                         } else {
                             // TODO: logger na errorze
@@ -149,9 +155,9 @@ const setupWebSocketServer = async (server, rodiAPI) => {
                 break;
 
                 case "stopMove":
-                    commandModel.robot_stop(() => {
+                    context.commandModel.robot_stop(() => {
                         if(res.message === "SUCCESS_SET") {
-                            isRobotBusy = false;
+                            // systemState.setRobotBusy(false);
                         } else {
                             connection.send(JSON.stringify({type: "notification", code: "WS_002", msg: "Error - cannot stop the robot"}))
                         }
@@ -163,14 +169,14 @@ const setupWebSocketServer = async (server, rodiAPI) => {
                 break;
 
                 case "config": 
-                    commandModel.config_list((res) => {
+                    context.commandModel.config_list((res) => {
                         console.debug(res);
                     });
                 break;
                 case "moveHome": 
-                    commandModel.move_home((res) => {
+                    context.commandModel.move_home((res) => {
                         if(res.message === "SUCCESS_SET") {
-                            isRobotBusy = true;
+                            // systemState.setRobotBusy(true);
                             streamRobotPositions();
                         } else {
                             connection.send(JSON.stringify({type: "notification", code: "WS_003", msg: "Error moving to home position"}))
@@ -178,35 +184,39 @@ const setupWebSocketServer = async (server, rodiAPI) => {
                     });
                 break;
                 case "servoOn":
-                    commandModel.servo_on((res) => {
+                    context.commandModel.servo_on((res) => {
                         if(res.message === "SUCCESS_SET") {
-                            streamRobotState(connection, {type: "update", value: {servo: true}});
+                            // streamRobotState(connection, {type: "update", value: {servo: true}});
+                            streamRobotState();
                         } else {
                             connection.send(JSON.stringify({type: "notification", code: "WS_004", msg: "Error while turning on the servo"}))
                         }
                     });
                 break;
                 case "servoOff":
-                    commandModel.servo_off((res) => {
+                    context.commandModel.servo_off((res) => {
                         if(res.message === "SUCCESS_SET") {
-                            streamRobotState(connection, {type: "update", value: {servo: false}});
+                            streamRobotState();
                         } else {
                             connection.send(JSON.stringify())
                         }
                     });
                 break;
                 case "setSpeed":
-                    commandModel.robot_speed(parsedMessage.data, (res) => {
+                    context.commandModel.robot_speed(parsedMessage.data, (res) => {
                         if(res.message === "SUCCESS_SET") {
                             // to musi tak być bo z jakiegoś powodu w callbacku robot nie ma jeszcze zaktualizowanego speed
-                            streamRobotState(connection, {type: "update", value: {speed: parsedMessage.data}});
+                            setTimeout(() => {
+                                streamRobotState();
+                            }, 50)
                         } else {
                             connection.send(JSON.stringify({type: "notification", code: "WS_006", msg: "Error while setting speed of robot"}))
                         }
                     })
                 break;
-                case "verifyScanData":
-                    verifyScanData(parsedMessage.data);
+                case "beginScan":
+                    beginScan(context, parsedMessage);
+                    // connection.send(JSON.stringify({type: "path", value: optimized}));
                 break;
             }
 
@@ -256,46 +266,37 @@ const setupWebSocketServer = async (server, rodiAPI) => {
 
 };
 
-
+/**
+ * Streams custom message to clients
+ * @param {*} msg 
+ */
 const streamMessage = (msg) => {
     for( const [uuid, connection] of Object.entries(connections)) {
         connection.send(JSON.stringify(msg))
     }
 }
 
-const streamRobotState = (streamingConn, msg) => {
+const waitForRobotState = (expectedState, timeout = 5000) => {
+    return new Promise((resolve, reject) => {
+        const startTime = Date.now();
 
-    streamingConn.send(JSON.stringify(msg));
+        const interval = setInterval(() => {
+            const robotState = robotModel.getRobotState();
+            console.debug('Current robot state:', robotState);
 
-    for( const [uuid, connection] of Object.entries(connections)) {
-        if(connection !== streamingConn) {
-            const state = currentState(robotModel, commandModel);
-            // const flange = { type: 'update', value: {position: robotModel.getCurrentFlangePosition()}}
-            connection.send(JSON.stringify(state))
-        }
-    }
-}
+            if (robotState === expectedState) {
+                clearInterval(interval);
+                resolve();
+            }
 
-const streamRobotPositions = () => {
-    const interval = setInterval(() => {
-        isRobotBusy = true;
-        const robotState = robotModel.getRobotState();
+            if (Date.now() - startTime > timeout) {
+                clearInterval(interval);
+                reject(new Error(`Timeout waiting for state: ${expectedState}`));
+            }
+        }, 50);
+    });
+};
 
-        for( const [uuid, connection] of Object.entries(connections)) {
-            const flange = { type: 'update', value: {position: robotModel.getCurrentFlangePosition()}}
-            connection.send(JSON.stringify(flange))
-        }
-
-        if(robotState === 'ROBOT_STATE_STOPPED' || robotState === 'ROBOT_STATE_IDLE') {
-            clearInterval(interval);
-            isRobotBusy = false;
-        }
-    }, 100);
-}
-
-const getRobotPosition = ()  => {
-
-}
 
 const findMaximumRunnableMotion = (axis) => {
     const flange = robotModel.getCurrentFlangePosition();
@@ -344,4 +345,12 @@ const handleClose = (uuid) => {
     console.debug(`Connection ${uuid} closed`);
 };
 
-module.exports = setupWebSocketServer;
+const test = () => {
+    console.debug('ouououououou')
+}
+
+module.exports = {
+    setupWebSocketServer,
+    waitForRobotState,
+    test
+};
