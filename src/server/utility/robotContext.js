@@ -119,18 +119,39 @@ module.exports = {
 			});
 		});
 	},
-	// performLidarScan: async () => {
+	// sendLidarCommand: async (msg) => {
 	// 	return new Promise((resolve, reject) => {
-	// 		robotContext.tcpClient.write(command, (err) => {
-	// 			if (err) {
-	// 				reject(`Failed to send command "${command}": ${err.message}`);
-	// 			} else {
-	// 				console.log(`Command "${command}" sent`);
-	// 				resolve();
-	// 			}
-	// 		});
+	// 		// const scanRequest = {
+	// 		// 	type: 'lidarScan',
+	// 		// };
+    //         console.debug('uwuwuwuwuwuwe')
+
+	// 		robotContext.tcpClient.send(msg)
+	// 			.then(() => {
+	// 				tcpClient.on('message', (response) => {
+	// 					console.debug('LIDAR scan response:', response);
+	// 					resolve(response);
+	// 				});
+	// 			})
+	// 			.catch((err) => {
+	// 				console.error('Error sending LIDAR scan request:', err);
+	// 				reject(err);
+	// 			});
 	// 	});
 	// }
+	
+	sendLidarCommand: async (msg) => {
+		try {
+			console.debug('Sending LIDAR command:', msg);
+			const response = await robotContext.tcpClient.send(msg);
+			console.debug('LIDAR response received:', response);
+			return response;
+		} catch (err) {
+			console.error('Error in sendLidarCommand:', err);
+			throw err;
+		}
+	}
+	
 
 	
 };

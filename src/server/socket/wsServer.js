@@ -37,14 +37,17 @@ const setupTcpEvents = async (wsServer) => {
         streamMessage(status);
     });
 
-    tcpClient.on('message', (data) => {
-        console.debug('Received from TCP:', data);
-        wsServer.clients.forEach((client) => {
-            if (client.readyState === WebSocket.OPEN) {
-                client.send(JSON.stringify(data));
-            }
-        });
-    });
+    // tcpClient.on('message', (data) => {
+    //     console.debug('Received from TCP:', data);
+
+
+
+    //     // wsServer.clients.forEach((client) => {
+    //     //     if (client.readyState === WebSocket.OPEN) {
+    //     //         client.send(JSON.stringify(data));
+    //     //     }
+    //     // });
+    // });
 
     tcpClient.on('error', async (err) => {
         console.debug('TCP client error:', err.message);
