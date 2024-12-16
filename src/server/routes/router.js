@@ -2,10 +2,10 @@ const express = require('express');
 const router = express.Router();
 
 const authRouter = require('./auth');
-const settingsRouter = require('./settings');
+const scansRouter = require('./scans');
 
 router.use('/login', authRouter);
-router.use('/settings', settingsRouter);
+router.use('/scans', scansRouter);
 
 // router.get('/', async (req, res, next) => {
 //     try {

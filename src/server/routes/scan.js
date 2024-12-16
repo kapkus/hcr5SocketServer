@@ -6,23 +6,20 @@ const mongoClient = require('../mongo');
 router.get('/', async (req, res, next) => {
     try{
         const client = await mongoClient();
-        const settings = client.collection('scanner_settings');
-        
-        // TODO rozważyc robienie tego - czy bede potrzebowac zapisywac 
+        const scans = client.collection('scan_metadata');
 
-        console.debug(settings);
-
-        // let resObj = {};
-        // if(user){
-        //     resObj = {
-        //         userId: user._id,
-        //         name: user.name,
-        //         userType: user.userType,
-        //         settings: user.settings
-        //     }
-        // }
-
-        res.status(200).json({ok: "ok"});
+        const scanList = await scans.find({}, {
+            projection: {
+                _id: 1,
+                scanFileName: 1,
+                startTime: 1,
+                endTime: 1,
+                currentWaypoint: 1,
+                isComplete: 1
+            }
+        }).toArray();
+       
+        res.status(200).json(scanList);
     } catch (err) {
         next(err);
     }

@@ -219,7 +219,9 @@ const setupWebSocketServer = async (server, rodiAPI) => {
                 break;
                 case "beginScan":
                     beginScan(context, parsedMessage);
-                    // connection.send(JSON.stringify({type: "path", value: optimized}));
+                break;
+                case "endScan":
+                    context.scanState.isRunning = false;
                 break;
             }
 

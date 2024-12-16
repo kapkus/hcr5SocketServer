@@ -1,5 +1,12 @@
 const { streamRobotPositions } = require("../socket/wsServer");
 
+const initScanState = {
+	isRunning: false,
+    isPaused: false,
+    currentWaypoint: 0,
+    scanFileName: '',
+}
+
 let isLidarBusy = null;
 let robotContext = {};
 
@@ -33,7 +40,8 @@ module.exports = {
 			robotModel: rodiAPI.getRobotModel(),
 			eventModel: rodiAPI.getEventModel(),
 			tcpClient: tcpClient,
-			connections: connections		
+			connections: connections,
+			scanState: initScanState	
 		}
 
 		return robotContext;
@@ -119,27 +127,6 @@ module.exports = {
 			});
 		});
 	},
-	// sendLidarCommand: async (msg) => {
-	// 	return new Promise((resolve, reject) => {
-	// 		// const scanRequest = {
-	// 		// 	type: 'lidarScan',
-	// 		// };
-    //         console.debug('uwuwuwuwuwuwe')
-
-	// 		robotContext.tcpClient.send(msg)
-	// 			.then(() => {
-	// 				tcpClient.on('message', (response) => {
-	// 					console.debug('LIDAR scan response:', response);
-	// 					resolve(response);
-	// 				});
-	// 			})
-	// 			.catch((err) => {
-	// 				console.error('Error sending LIDAR scan request:', err);
-	// 				reject(err);
-	// 			});
-	// 	});
-	// }
-	
 	sendLidarCommand: async (msg) => {
 		try {
 			console.debug('Sending LIDAR command:', msg);
@@ -150,6 +137,9 @@ module.exports = {
 			console.error('Error in sendLidarCommand:', err);
 			throw err;
 		}
+	},
+	scanSetInitState: () => {
+		robotContext.scanState = initScanState;
 	}
 	
 

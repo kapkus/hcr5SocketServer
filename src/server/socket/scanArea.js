@@ -1,18 +1,33 @@
-const { robotWaitForIdle, moveLinear, streamRobotPositions, sendLidarCommand } = require('../utility/robotContext');
+const { robotWaitForIdle, moveLinear, streamRobotPositions, sendLidarCommand, scanSetInitState } = require('../utility/robotContext');
 const fs = require('fs');
+const mongoClient = require('../mongo');
 
 const beginScan = async (context, scan) => {
     const {commandModel, connections, robotModel} = context;
+    const client = await mongoClient();
 
     const orientation = [180, 0, -90];
     const {zLevel, data} = scan;
     let currWaypoint = 0;
-    const outputFile = fs.createWriteStream('lidar_points.bin');
+    const scanFileName = `lidar_scan_${Date.now()}.bin`;
+    const outputFile = fs.createWriteStream(scanFileName);
 
+    await client.collection('scan_metadata').insertOne({
+        scanFileName,
+        startTime: new Date(),
+        currentWaypoint: 0,
+        waypoints: data,
+        isComplete: false,
+    });
+
+    context.scanState.scanFileName = scanFileName;
+    context.scanState.isRunning = true;
 
     await sendLidarCommand('START_SCAN');
 
     for(const item of data) {
+        if(!context.scanState.isRunning) break; 
+
         const position = {position: [item.x, item.y, zLevel], orientation: orientation}; 
 
         try {
@@ -30,20 +45,27 @@ const beginScan = async (context, scan) => {
                 outputFile.write(buffer);
             });
 
-            // console.debug(transformedPoints);
             await robotWaitForIdle();
+
+            currWaypoint++;
+            context.scanState.currentWaypoint = currWaypoint;
         } catch (error) {
             console.error('Move failed:', error);
             break;
         }
 
-        currWaypoint++;
         // console.debug(`waypoint ${currWaypoint} reached`);
     }
 
     await sendLidarCommand('STOP');
+
+    await client.collection('scan_metadata').updateOne(
+        { scanFileName },
+        { $set: { isComplete: true, endTime: new Date() } }
+    );
     outputFile.end();
-      
+
+    scanSetInitState();
 }
 
 const transformLidarPoints = (lidarData, position) => {
