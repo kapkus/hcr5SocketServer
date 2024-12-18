@@ -1,5 +1,7 @@
 const { robotWaitForIdle, moveLinear, streamRobotPositions, sendLidarCommand, scanSetInitState } = require('../utility/robotContext');
 const fs = require('fs');
+const path = require('path');
+const config = require('../config/config');
 const mongoClient = require('../mongo');
 
 const beginScan = async (context, scan) => {
@@ -9,8 +11,12 @@ const beginScan = async (context, scan) => {
     const orientation = [180, 0, -90];
     const {zLevel, data} = scan;
     let currWaypoint = 0;
-    const scanFileName = `lidar_scan_${Date.now()}.bin`;
-    const outputFile = fs.createWriteStream(scanFileName);
+    const scanFileName = `lidar_scan_${Date.now()}`;
+    const outputFile = fs.createWriteStream(
+        path.join(config.scansDir, `${scanFileName}.bin`)
+    );
+
+    console.debug(outputFile);
 
     await client.collection('scan_metadata').insertOne({
         scanFileName,

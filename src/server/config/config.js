@@ -1,4 +1,11 @@
+const path = require('path');
+
+const rootDir = path.join(__dirname, '..');
+
 module.exports = {
+    rootDir,
+    scansDir: path.join(rootDir, '../../scans'),
+
     API: {
         HOST: process.env.API_HOST || '127.0.0.1'
     },
@@ -13,7 +20,6 @@ module.exports = {
         HOST: process.env.LIDAR_TCP_HOST || '0.0.0.0',
         PORT: process.env.LIDAR_TCP_PORT || 8002
     },
-
     CONSTANT: {
         HTTP_RESPONSE_CODE: {
             SUCCESS: 200,

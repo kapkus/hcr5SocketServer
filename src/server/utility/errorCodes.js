@@ -15,6 +15,13 @@ const transformError = (err) => {
         case "ERR_004":{
             return { msg: "Authentication error", status: HTTP_RESPONSE_CODE.BAD_REQUEST }
         }
+        case "ERR_005":{
+            return { msg: "Requested file not found", status: HTTP_RESPONSE_CODE.NOT_FOUND }
+        }
+        case "ERR_006":{
+            return { msg: "Error while downloading the file", status: HTTP_RESPONSE_CODE.INTERNAL_ERROR }
+        }
+
 
         default: {
             return { msg: "Unknown error", status: HTTP_RESPONSE_CODE.INTERNAL_ERROR }

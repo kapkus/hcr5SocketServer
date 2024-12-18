@@ -3,13 +3,14 @@ require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 const http = require('http');
 const express = require('express');
 const {setupWebSocketServer} = require('./socket/wsServer');
-const config = require('./config');
+const config = require('./config/config');
 const cors = require('cors');
 const routes = require('./routes/router');
 const authMiddleware = require('./middleware/authToken');
 const errorMiddleware = require('./middleware/errorHandler');
+const { setupScansDir } = require('./utility/utils');
 
-
+const scansDir = config.scansDir;
 const app = express();
 const server = http.createServer(app);
 const host = config.API.HOST;
@@ -22,9 +23,7 @@ const corsOptions = {
 }
 
 const setupServer = (port, rodiAPI) => {
-    console.debug('mongoURI', mongoURI)
-    console.debug('mongoURI', host)
-
+    setupScansDir(scansDir);
     app.use(express.json());
     app.use(cors(corsOptions));
     setupWebSocketServer(server, rodiAPI);

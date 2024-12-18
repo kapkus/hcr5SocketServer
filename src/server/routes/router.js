@@ -3,9 +3,11 @@ const router = express.Router();
 
 const authRouter = require('./auth');
 const scansRouter = require('./scans');
+const scanRouter = require('./scan');
 
 router.use('/login', authRouter);
 router.use('/scans', scansRouter);
+router.use('/scan', scanRouter);
 
 // router.get('/', async (req, res, next) => {
 //     try {
