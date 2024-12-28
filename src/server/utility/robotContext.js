@@ -39,6 +39,8 @@ module.exports = {
 			variableModel: rodiAPI.getVariableModel(),
 			robotModel: rodiAPI.getRobotModel(),
 			eventModel: rodiAPI.getEventModel(),
+			programModel: rodiAPI.getProgramModel(),
+			tcpModel: rodiAPI.getTcpModel(),
 			tcpClient: tcpClient,
 			connections: connections,
 			scanState: initScanState	
@@ -115,6 +117,7 @@ module.exports = {
 			// }
 		}
 	},
+	// TODO nieużywane
 	sendCommand: async (command) => {
 		return new Promise((resolve, reject) => {
 			robotContext.tcpClient.write(command, (err) => {

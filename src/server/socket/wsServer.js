@@ -9,7 +9,7 @@ const { isRobotBusy, createRobotContext, getCurrentState, streamRobotPositions, 
 // const eventEmitter = require('../utils/eventEmitter');
 
 const connections = {};
-let commandModel = null;
+// let commandModel = null;
 let robotModel = null;
 
 let context = null;
@@ -219,6 +219,19 @@ const setupWebSocketServer = async (server, rodiAPI) => {
                 break;
                 case "beginScan":
                     beginScan(context, parsedMessage);
+                break;
+                case "getTcpList":
+                    const tcpList = context.tcpModel.getTcpList()
+                    console.debug("TCP LIST: ", tcpList);
+                    const tcpNames = tcpList.map((tcp) => ( tcp.getName() ))
+                    console.debug("TCP NAMES: ", tcpNames);
+                    const test = context.tcpModel
+                    console.debug("TEST: ", test)
+                    // console.debug(" curr TCP NAME: ", tcpName);
+                    connection.send(JSON.stringify({type: "tcpList", value: tcpNames}))
+                    break;
+                case "setTcp":
+                    // beginScan(context, parsedMessage);
                 break;
                 case "endScan":
                     context.scanState.isRunning = false;

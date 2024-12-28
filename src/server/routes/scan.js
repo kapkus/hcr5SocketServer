@@ -7,9 +7,13 @@ const fs = require('fs');
 const path = require('path');
 const binaryScanToPly = require('../services/binaryScanToPly');
 
-router.get('/:id/ply', async (req, res, next) => {
+router.post('/:id/ply', async (req, res, next) => {
     try {
         const id = req.params.id;
+        const body = req.body;
+
+        console.debug(body);
+
         const scansDir = config.scansDir;
         const client = await mongoClient();
         const collection = client.collection('scan_metadata');
@@ -24,10 +28,11 @@ router.get('/:id/ply', async (req, res, next) => {
             throw { code: "ERR_005" };
         }
 
-        const outputPlyFile = binaryScanToPly(filePath);
+        const plyOutputFile = path.join(scansDir, `${scan.scanFileName}.ply`);
+        const voxelSize = req.body?.voxelSize ? req.body?.voxelSize : 0.1;
+        binaryScanToPly(filePath, plyOutputFile, voxelSize);
         
-
-        res.sendFile(filePath, (err) => {
+        res.sendFile(plyOutputFile, (err) => {
             if (err) {
                 throw { code: "ERR_006" };
             }
