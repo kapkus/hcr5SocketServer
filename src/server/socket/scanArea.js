@@ -1,4 +1,4 @@
-const { robotWaitForIdle, moveLinear, streamRobotPositions, sendLidarCommand, scanSetInitState } = require('../utility/robotContext');
+const { robotWaitForIdle, moveLinear, streamRobotPositions, sendLidarCommand, scanSetInitState, moveToScanWaypoint } = require('../utility/robotContext');
 const fs = require('fs');
 const path = require('path');
 const config = require('../config/config');
@@ -8,7 +8,14 @@ const beginScan = async (context, scan) => {
     const {commandModel, connections, robotModel} = context;
     const client = await mongoClient();
 
-    const orientation = [180, 0, -90];
+    const activeTcp = context.robotModel.getActiveTcp();
+    const tcpPos = activeTcp.getPosition();
+    const tcpOrientation = activeTcp.getOrientation();
+
+    const orientations = [
+        [180, 0, -90], // vertical scanning
+        [180, 0, 0] // horizontal scanning
+    ];
     const {zLevel, data} = scan;
     let currWaypoint = 0;
     const scanFileName = `lidar_scan_${Date.now()}`;
@@ -31,37 +38,48 @@ const beginScan = async (context, scan) => {
 
     await sendLidarCommand('START_SCAN');
 
-    for(const item of data) {
-        if(!context.scanState.isRunning) break; 
+    for(const orientation of orientations) {
+        for(const item of data) {
+            if(!context.scanState.isRunning) break; 
 
-        const position = {position: [item.x, item.y, zLevel], orientation: orientation}; 
+            const tcp = context.robotModel.getActiveTcp();
+            console.debug('tcpOr', tcp.getOrientation());
+            console.debug('tcpPos', tcp.getPosition());
+            try {
+                const position = {
+                    position: calculatePosition(item, tcpPos, zLevel, orientation),
+                    orientation: orientation
+                }; 
+                
+                console.debug(position)
 
-        try {
-            await moveLinear(position);
-            await streamRobotPositions();
-            const lidarPoints = await sendLidarCommand('GET_SAMPLE');
-            const transformedPoints = transformLidarPoints(lidarPoints.response.data, position)
-
-            transformedPoints.forEach((point) => {
-                const buffer = Buffer.alloc(16); // 4 floats (4 bytes each)
-                buffer.writeFloatLE(point.x, 0);
-                buffer.writeFloatLE(point.y, 4);
-                buffer.writeFloatLE(point.z, 8);
-                buffer.writeFloatLE(point.reflection, 12);
-                outputFile.write(buffer);
-            });
-
-            await robotWaitForIdle();
-
-            currWaypoint++;
-            context.scanState.currentWaypoint = currWaypoint;
-        } catch (error) {
-            console.error('Move failed:', error);
-            break;
+                await moveLinear(position);
+                await streamRobotPositions();
+                const lidarPoints = await sendLidarCommand('GET_SAMPLE');
+                const transformedPoints = transformLidarPoints(lidarPoints.response.data, position)
+    
+                transformedPoints.forEach((point) => {
+                    const buffer = Buffer.alloc(16); // 4 floats (4 bytes each)
+                    buffer.writeFloatLE(point.x, 0);
+                    buffer.writeFloatLE(point.y, 4);
+                    buffer.writeFloatLE(point.z, 8);
+                    buffer.writeFloatLE(point.reflection, 12);
+                    outputFile.write(buffer);
+                });
+    
+                await robotWaitForIdle();
+    
+                currWaypoint++;
+                context.scanState.currentWaypoint = currWaypoint;
+            } catch (error) {
+                console.error('Move failed:', error);
+                break;
+            }
+    
+            // console.debug(`waypoint ${currWaypoint} reached`);
         }
-
-        // console.debug(`waypoint ${currWaypoint} reached`);
     }
+    
 
     await sendLidarCommand('STOP');
 
@@ -73,6 +91,17 @@ const beginScan = async (context, scan) => {
 
     scanSetInitState();
 }
+
+const calculatePosition = (item, tcpPos, zLevel, orientation) => {
+    switch (orientation.toString()) {
+        case '180,0,-90':
+            return [item.x, item.y + tcpPos.x, zLevel + tcpPos.z];
+        case '180,0,0':
+            return [item.x - tcpPos.x, item.y, zLevel + tcpPos.z];
+        default:
+            throw new Error(`Unsupported orientation: ${orientation}`);
+    }
+};
 
 const transformLidarPoints = (lidarData, position) => {
     return lidarData

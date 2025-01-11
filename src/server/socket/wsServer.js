@@ -221,17 +221,30 @@ const setupWebSocketServer = async (server, rodiAPI) => {
                     beginScan(context, parsedMessage);
                 break;
                 case "getTcpList":
-                    const tcpList = context.tcpModel.getTcpList()
-                    console.debug("TCP LIST: ", tcpList);
-                    const tcpNames = tcpList.map((tcp) => ( tcp.getName() ))
-                    console.debug("TCP NAMES: ", tcpNames);
-                    const test = context.tcpModel
-                    console.debug("TEST: ", test)
-                    // console.debug(" curr TCP NAME: ", tcpName);
-                    connection.send(JSON.stringify({type: "tcpList", value: tcpNames}))
+                    const tcpList = context.tcpModel.getTcpList();
+                    const activeTcp = context.robotModel.getActiveTcp();
+
+                    console.debug(activeTcp.getPosition());
+                    console.debug(activeTcp.getOrientation());
+
+                    const tcpData = tcpList.map((tcp) => {
+                        return {
+                            name: tcp.getName(),
+                            position: tcp.getPosition(),
+                            orientation: tcp.getOrientation(),
+                            gravity: tcp.getGravity(),
+                            gravityUse: tcp.isGravityUse(),
+                            payload: tcp.getPayload(),
+                            isActive: tcp.getName() === activeTcp.getName()
+                        }
+                    })
+
+                    console.debug(tcpData);
+
+                    connection.send(JSON.stringify({type: "tcpList", value: tcpData}))
                     break;
                 case "setTcp":
-                    // beginScan(context, parsedMessage);
+                    // TODO: funkcja do zmiany tcp?
                 break;
                 case "endScan":
                     context.scanState.isRunning = false;
@@ -330,33 +343,10 @@ const findMaximumRunnableMotion = (axis) => {
     console.debug(flange);
 }
 
-//ROBOT_STATE_IDLE
+// ROBOT_STATE_IDLE
 // ROBOT_STATE_MOVING
 // ROBOT_STATE_STOPPING
-//ROBOT_STATE_STOPPED
-
-// const handleMessage = (msg, uuid, connection) => {
-//     try {
-
-//         console.log("test")
-//         const response = {
-//             type: 'response',
-//             message: `test: ${msg.content || ''}`
-//         };
-
-//         connection.send(JSON.stringify(response));
-
-//     } catch (err) {
-//         console.error(`error: ${err}`);
-//     }
-// };
-
-// const forwardMessage = (msg, connection) => {
-//     console.log(msg)
-//     eventEmitter.emit('forwardToTCP', msg);
-
-//     //TODO: forward na client robota
-// }
+// ROBOT_STATE_STOPPED
 
 const handleClose = (uuid) => {
     delete connections[uuid];

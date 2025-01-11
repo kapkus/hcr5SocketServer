@@ -1,3 +1,4 @@
+const { resolve } = require("mongodb/lib/core/topologies/read_preference");
 const { streamRobotPositions } = require("../socket/wsServer");
 
 const initScanState = {
@@ -32,6 +33,14 @@ module.exports = {
 	getRobotContext: () => {
 		return robotContext;
 	},
+	/**
+	 * Creates robot context
+	 * include models here
+	 * @param {*} rodiAPI 
+	 * @param {*} tcpClient 
+	 * @param {*} connections 
+	 * @returns 
+	 */
 	createRobotContext: (rodiAPI, tcpClient, connections) => {
 		robotContext = {
 			commandModel: rodiAPI.getCommandModel(),
@@ -39,19 +48,35 @@ module.exports = {
 			variableModel: rodiAPI.getVariableModel(),
 			robotModel: rodiAPI.getRobotModel(),
 			eventModel: rodiAPI.getEventModel(),
+			softwareVersion: rodiAPI.getSoftwareVersion(),
 			programModel: rodiAPI.getProgramModel(),
 			tcpModel: rodiAPI.getTcpModel(),
+			controllerModel: rodiAPI.getControllerModel(),
 			tcpClient: tcpClient,
 			connections: connections,
 			scanState: initScanState	
 		}
 
+		/** DEBUG */
+		
+		console.debug('commandModel', robotContext.commandModel)
+		console.debug('coordinateModel', robotContext.coordinateModel)
+		console.debug('variableModel', robotContext.variableModel)
+		console.debug('robotModel', robotContext.robotModel)
+		console.debug('eventModel', robotContext.eventModel)
+		console.debug('programModel', robotContext.programModel)
+		console.debug('tcpModel', robotContext.tcpModel)
+		console.debug('controlermodel', robotContext.controllerModel)
+		
+
+		
 		return robotContext;
 	},
 	getCurrentState: () => {
 		const state = { type: 'update', value: {} };
 
-		state.value.position = robotContext.robotModel.getCurrentFlangePosition();
+		// state.value.position = robotContext.robotModel.getCurrentFlangePosition();
+		state.value.position = robotContext.robotModel.getCurrentTcpPosition();
 		state.value.servo = robotContext.robotModel.isServoOn();
 		state.value.speed = robotContext.robotModel.getSpeedFactor();
 
@@ -86,8 +111,9 @@ module.exports = {
 				const robotState = robotContext.robotModel.getRobotState();
 	
 				for (const [uuid, connection] of Object.entries(robotContext.connections)) {
-					const flange = { type: 'update', value: { position: robotContext.robotModel.getCurrentFlangePosition() }};
-					connection.send(JSON.stringify(flange));
+					// const flange = { type: 'update', value: { position: robotContext.robotModel.getCurrentFlangePosition() }};
+					const tcp = { type: 'update', value: { position: robotContext.robotModel.getCurrentTcpPosition() }};
+					connection.send(JSON.stringify(tcp));
 				}
 	
 				if (robotState === 'ROBOT_STATE_STOPPED' || robotState === 'ROBOT_STATE_IDLE') {
@@ -107,7 +133,7 @@ module.exports = {
 
 		// console.debug(robotContext.connections);
 		const state = module.exports.getCurrentState();
-		console.debug(state)
+		// console.debug(state)
 
 
 		for( const [uuid, connection] of Object.entries(robotContext.connections)) {
@@ -124,7 +150,7 @@ module.exports = {
 				if (err) {
 					reject(`Failed to send command "${command}": ${err.message}`);
 				} else {
-					console.log(`Command "${command}" sent`);
+					// console.log(`Command "${command}" sent`);
 					resolve();
 				}
 			});
@@ -132,9 +158,9 @@ module.exports = {
 	},
 	sendLidarCommand: async (msg) => {
 		try {
-			console.debug('Sending LIDAR command:', msg);
+			// console.debug('Sending LIDAR command:', msg);
 			const response = await robotContext.tcpClient.send(msg);
-			console.debug('LIDAR response received:', response);
+			// console.debug('LIDAR response received:', response);
 			return response;
 		} catch (err) {
 			console.error('Error in sendLidarCommand:', err);
